@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#009688"
+    tools:context=".Arduino_Activity">
+
+    <Button
+        android:id="@+id/btnCerrar"
+        android:layout_width="250sp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="80dp"
+        android:layout_marginTop="104dp"
+        android:layout_marginEnd="81dp"
+        android:text="Cerrar sesión"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnRegar" />
+
+    <TextView
+        android:id="@+id/Titulo_principal"
+        android:layout_width="318dp"
+        android:layout_height="86dp"
+        android:layout_marginStart="46dp"
+        android:layout_marginTop="52dp"
+        android:layout_marginEnd="47dp"
+        android:fontFamily="@font/comfortaa"
+        android:text="Sistema de riego"
+        android:textColor="#F4EDED"
+        android:textSize="35sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="32dp"
+        app:cardBackgroundColor="#512DA8"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="4dp">
+
+    </com.google.android.material.card.MaterialCardView>
+
+
+    <Button
+        android:id="@+id/btnConectar"
+        android:layout_width="270dp"
+        android:layout_height="68dp"
+        android:layout_marginStart="70dp"
+        android:layout_marginTop="108dp"
+        android:layout_marginEnd="71dp"
+        android:text="Conectarse"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/Titulo_principal" />
+
+    <Button
+        android:id="@+id/btnEstado"
+        android:layout_width="270sp"
+        android:layout_height="68sp"
+        android:layout_marginStart="70dp"
+        android:layout_marginTop="44dp"
+        android:layout_marginEnd="71dp"
+        android:text="Estado"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnConectar" />
+
+    <Button
+        android:id="@+id/btnRegar"
+        android:layout_width="270sp"
+        android:layout_height="68sp"
+        android:layout_marginStart="70dp"
+        android:layout_marginTop="36dp"
+        android:layout_marginEnd="71dp"
+        android:text="Regar"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnEstado" />
+
+    <TextView
+        android:id="@+id/tvRespuestaArduino"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="16dp"
+        android:text="Respuesta del Arduino: Esperando..."
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        tools:layout_editor_absoluteX="18dp"
+        tools:layout_editor_absoluteY="169dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+
