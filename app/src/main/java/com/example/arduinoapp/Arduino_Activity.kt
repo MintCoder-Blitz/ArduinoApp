@@ -5,6 +5,8 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -12,25 +14,41 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
-import androidx.annotation.RequiresPermission
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import java.io.IOException
 import java.io.InputStream
 import java.util.UUID
+import java.util.concurrent.Executors
 
 class Arduino_Activity : AppCompatActivity() {
 
-    private val UUID_HC06 = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
-    private var bluetoothSocket: BluetoothSocket? = null
-    private var bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
-
-    // Variables para la lectura continua del Arduino
-    private var inputStream: InputStream? = null
-    @Volatile private var escuchandoBluetooth = false
+    private val uuidHc06 = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+    private val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+    private val connectionExecutor = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
 
+    @Volatile
+    private var bluetoothSocket: BluetoothSocket? = null
+    private var inputStream: InputStream? = null
+
+    @Volatile
+    private var escuchandoBluetooth = false
+
+    private lateinit var btnConectar: Button
     private lateinit var tvRespuestaArduino: TextView
+
+    private val solicitudPermisoBluetooth =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { concedido ->
+            if (concedido) {
+                conectarBluetooth()
+            } else {
+                mostrarToast("Se necesita permiso de Bluetooth para conectar")
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,124 +61,183 @@ class Arduino_Activity : AppCompatActivity() {
             insets
         }
 
-        val btnConectar = findViewById<Button>(R.id.btnConectar)
+        btnConectar = findViewById(R.id.btnConectar)
         val btnEstado = findViewById<Button>(R.id.btnEstado)
         val btnRegar = findViewById<Button>(R.id.btnRegar)
         val btnCerrarSesion = findViewById<Button>(R.id.btnCerrar)
         tvRespuestaArduino = findViewById(R.id.tvRespuestaArduino)
 
-        // 1. Conectar al HC-06
         btnConectar.setOnClickListener {
             conectarBluetooth()
         }
 
-        // 2. Botón Estado -> Envía "ESTADO\n" para activar la lectura del sensor en el Arduino
         btnEstado.setOnClickListener {
-            enviarComando("ESTADO\n")
-            Toast.makeText(this, "Consultando estado...", Toast.LENGTH_SHORT).show()
+            enviarComando("ESTADO\n", "Consultando estado...")
         }
 
-        // 3. Botón Regar -> Envía "SI\n" para confirmar el riego cuando el Arduino lo pida
         btnRegar.setOnClickListener {
-            enviarComando("SI\n")
-            Toast.makeText(this, "Enviando confirmación de riego (SI)", Toast.LENGTH_SHORT).show()
+            enviarComando("SI\n", "Enviando confirmación de riego (SI)")
         }
 
-        // 4. Botón Cerrar sesión
         btnCerrarSesion.setOnClickListener {
             desconectarBluetooth()
-            val intent = Intent(this, MainActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, MainActivity::class.java))
             finish()
         }
     }
 
-    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun conectarBluetooth() {
-        if (bluetoothAdapter == null) {
-            Toast.makeText(this, "Bluetooth no disponible", Toast.LENGTH_SHORT).show()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            solicitudPermisoBluetooth.launch(Manifest.permission.BLUETOOTH_CONNECT)
             return
         }
 
-        val dispositivosEmparejados = bluetoothAdapter?.bondedDevices
-        var dispositivoHC06: BluetoothDevice? = null
+        val adapter = bluetoothAdapter
+        if (adapter == null) {
+            mostrarToast("Bluetooth no disponible")
+            return
+        }
 
-        dispositivosEmparejados?.forEach { dispositivo ->
-            if (dispositivo.name == "HC-06") {
-                dispositivoHC06 = dispositivo
-                return@forEach
+        btnConectar.isEnabled = false
+        connectionExecutor.execute {
+            var socket: BluetoothSocket? = null
+            try {
+                if (!adapter.isEnabled) {
+                    mostrarErrorConexion("Activa Bluetooth e inténtalo de nuevo")
+                    return@execute
+                }
+
+                val dispositivo: BluetoothDevice? =
+                    adapter.bondedDevices.firstOrNull { it.name == "HC-06" }
+                if (dispositivo == null) {
+                    mostrarErrorConexion("No se encontró el HC-06 vinculado")
+                    return@execute
+                }
+
+                socket = dispositivo.createRfcommSocketToServiceRecord(uuidHc06)
+                socket.connect()
+                val stream = socket.inputStream
+                bluetoothSocket = socket
+                inputStream = stream
+                escuchandoBluetooth = true
+
+                handler.post {
+                    if (!isFinishing) {
+                        btnConectar.isEnabled = true
+                        Toast.makeText(this, "¡Conectado al HC-06!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                iniciarLecturaBluetooth(stream)
+            } catch (e: IOException) {
+                cerrarSocket(socket)
+                mostrarErrorConexion("No se pudo conectar con el Arduino")
+            } catch (e: SecurityException) {
+                cerrarSocket(socket)
+                mostrarErrorConexion("No hay permiso para acceder a Bluetooth")
             }
-        }
-
-        if (dispositivoHC06 == null) {
-            Toast.makeText(this, "No se encontró el HC-06 vinculado.", Toast.LENGTH_LONG).show()
-            return
-        }
-
-        try {
-            bluetoothSocket = dispositivoHC06?.createRfcommSocketToServiceRecord(UUID_HC06)
-            bluetoothSocket?.connect()
-            inputStream = bluetoothSocket?.inputStream
-            escuchandoBluetooth = true
-
-            // Arrancamos el hilo para escuchar lo que responde el Arduino
-            iniciarLecturaBluetooth()
-
-            Toast.makeText(this, "¡Conectado al HC-06!", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "Error al conectar con el Arduino", Toast.LENGTH_LONG).show()
-            desconectarBluetooth()
         }
     }
 
-    // --- HILO SECUNDARIO PARA LEER RESPUESTAS DEL ARDUINO ---
-    private fun iniciarLecturaBluetooth() {
-        Thread {
+    private fun iniciarLecturaBluetooth(stream: InputStream) {
+        Thread({
             val buffer = ByteArray(1024)
-            var bytes: Int
+            try {
+                while (escuchandoBluetooth) {
+                    val bytes = stream.read(buffer)
+                    if (bytes < 0) break
 
-            while (escuchandoBluetooth) {
-                try {
-                    if (inputStream != null && inputStream!!.available() > 0) {
-                        bytes = inputStream!!.read(buffer)
-                        val mensajeRecibido = String(buffer, 0, bytes).trim()
-
-                        if (mensajeRecibido.isNotEmpty()) {
-                            // Actualizamos la interfaz gráfica de Android de forma segura
-                            handler.post {
-                                tvRespuestaArduino.text = mensajeRecibido
+                    val mensaje = String(buffer, 0, bytes, Charsets.UTF_8).trim()
+                    if (mensaje.isNotEmpty()) {
+                        handler.post {
+                            if (!isFinishing) {
+                                tvRespuestaArduino.text = mensaje
                             }
                         }
                     }
-                } catch (e: Exception) {
-                    escuchandoBluetooth = false
+                }
+            } catch (e: IOException) {
+                if (escuchandoBluetooth) {
+                    mostrarToast("Se perdió la conexión con el Arduino")
+                }
+            } finally {
+                escuchandoBluetooth = false
+                handler.post {
+                    if (!isFinishing) {
+                        btnConectar.isEnabled = true
+                    }
                 }
             }
-        }.start()
+        }, "hc06-reader").start()
     }
 
-    private fun enviarComando(comando: String) {
-        if (bluetoothSocket != null && bluetoothSocket!!.isConnected) {
+    private fun enviarComando(comando: String, mensajeEnviado: String) {
+        connectionExecutor.execute {
             try {
-                bluetoothSocket!!.outputStream.write(comando.toByteArray())
-            } catch (e: Exception) {
-                Toast.makeText(this, "Error al enviar comando", Toast.LENGTH_SHORT).show()
+                val socket = bluetoothSocket
+                if (socket == null || !socket.isConnected) {
+                    mostrarToast("Primero conéctate al Arduino")
+                    return@execute
+                }
+
+                socket.outputStream.apply {
+                    write(comando.toByteArray(Charsets.UTF_8))
+                    flush()
+                }
+                mostrarToast(mensajeEnviado)
+            } catch (e: IOException) {
+                mostrarToast("Error al enviar el comando")
+            } catch (e: SecurityException) {
+                mostrarToast("No hay permiso para acceder a Bluetooth")
             }
-        } else {
-            Toast.makeText(this, "Primero conéctate al Arduino", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun mostrarErrorConexion(mensaje: String) {
+        handler.post {
+            if (!isFinishing) {
+                btnConectar.isEnabled = true
+                Toast.makeText(this, mensaje, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun mostrarToast(mensaje: String) {
+        handler.post {
+            if (!isFinishing) {
+                Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun cerrarSocket(socket: BluetoothSocket?) {
+        try {
+            socket?.close()
+        } catch (_: IOException) {
         }
     }
 
     private fun desconectarBluetooth() {
         escuchandoBluetooth = false
+        val stream = inputStream
+        val socket = bluetoothSocket
+        inputStream = null
+        bluetoothSocket = null
+
         try {
-            inputStream?.close()
-            bluetoothSocket?.close()
-        } catch (e: Exception) { }
+            stream?.close()
+        } catch (_: IOException) {
+        }
+        cerrarSocket(socket)
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         desconectarBluetooth()
+        connectionExecutor.shutdownNow()
+        super.onDestroy()
     }
 }

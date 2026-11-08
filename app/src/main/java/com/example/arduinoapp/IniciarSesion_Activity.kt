@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -32,8 +31,8 @@ class IniciarSesion_Activity : AppCompatActivity() {
         val btniniciarsesion = findViewById<Button>(R.id.btniniciarsesion)
 
         btniniciarsesion.setOnClickListener {
-            val textoUsuario = ptingresarusuario.text.toString()
-            val textocontraseña = ptingresocontraseña.text.toString()
+            val textoUsuario = ptingresarusuario.text.toString().trim()
+            val textocontraseña = ptingresocontraseña.text.toString().trim()
 
             if (textoUsuario.isEmpty() || textocontraseña.isEmpty()) {
                 Toast.makeText(this, "Rellene todos los campos", Toast.LENGTH_SHORT).show()

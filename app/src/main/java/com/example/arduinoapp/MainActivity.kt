@@ -23,9 +23,15 @@ class MainActivity : AppCompatActivity() {
         //pantalla de inicio
 
         val btnCrearCuenta = findViewById<Button>(R.id.btncrear)
+        val btnIniciarSesion = findViewById<Button>(R.id.btningresar)
 
         btnCrearCuenta.setOnClickListener {
             val intent = Intent(this, CrearCuentaActivity::class.java)
+            startActivity(intent)
+        }
+
+        btnIniciarSesion.setOnClickListener {
+            val intent = Intent(this, IniciarSesion_Activity::class.java)
             startActivity(intent)
         }
     }
