@@ -86,7 +86,7 @@ class Arduino_Activity : AppCompatActivity() {
         }
 
         btnMedidor.setOnClickListener {
-            enviarComando("MEDIDOR\n", "Consultando valor del medidor...")
+            enviarComando("VALOR\n", "Consultando valor del medidor...")
         }
 
         btnCerrarSesion.setOnClickListener {
