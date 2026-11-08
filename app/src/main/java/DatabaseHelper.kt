@@ -35,4 +35,24 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "riego_app.db
         cursor.close()
         return existe
     }
+
+    fun actualizarContrasena(nombre: String, nuevaContrasena: String): Boolean {
+        val valores = ContentValues().apply {
+            put("contrasena", nuevaContrasena)
+        }
+        return writableDatabase.update(
+            "usuarios",
+            valores,
+            "nombre = ?",
+            arrayOf(nombre)
+        ) > 0
+    }
+
+    fun eliminarUsuario(nombre: String, contrasena: String): Boolean {
+        return writableDatabase.delete(
+            "usuarios",
+            "nombre = ? AND contrasena = ?",
+            arrayOf(nombre, contrasena)
+        ) > 0
+    }
 }

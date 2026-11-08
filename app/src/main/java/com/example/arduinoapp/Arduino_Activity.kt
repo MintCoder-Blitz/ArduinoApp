@@ -64,6 +64,8 @@ class Arduino_Activity : AppCompatActivity() {
         btnConectar = findViewById(R.id.btnConectar)
         val btnEstado = findViewById<Button>(R.id.btnEstado)
         val btnRegar = findViewById<Button>(R.id.btnRegar)
+        val btnNoRegar = findViewById<Button>(R.id.btnNoRegar)
+        val btnMedidor = findViewById<Button>(R.id.btnMedidor)
         val btnCerrarSesion = findViewById<Button>(R.id.btnCerrar)
         tvRespuestaArduino = findViewById(R.id.tvRespuestaArduino)
 
@@ -77,6 +79,14 @@ class Arduino_Activity : AppCompatActivity() {
 
         btnRegar.setOnClickListener {
             enviarComando("SI\n", "Enviando confirmación de riego (SI)")
+        }
+
+        btnNoRegar.setOnClickListener {
+            enviarComando("NO\n", "Enviando confirmación de no regar (NO)")
+        }
+
+        btnMedidor.setOnClickListener {
+            enviarComando("MEDIDOR\n", "Consultando valor del medidor...")
         }
 
         btnCerrarSesion.setOnClickListener {
