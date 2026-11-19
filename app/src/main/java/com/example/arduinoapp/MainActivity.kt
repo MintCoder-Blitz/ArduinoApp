@@ -92,7 +92,7 @@ class MainActivity : AppCompatActivity() {
                 val mensaje = if (eliminado) {
                     "La cuenta fue eliminada"
                 } else {
-                    "Usuario o contraseña incorrectos"
+                    "No se puede eliminar: la cuenta no existe o es la única cuenta"
                 }
                 Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show()
             }

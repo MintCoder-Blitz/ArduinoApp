@@ -4,6 +4,7 @@ import DatabaseHelper
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.RadioButton
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -29,6 +30,7 @@ class CrearCuentaActivity : AppCompatActivity() {
         val etContraseña = findViewById<EditText>(R.id.ptContraseña)
         val etConfirmar = findViewById<EditText>(R.id.ptConfirmar)
         val btnRegistrarse = findViewById<Button>(R.id.btnRegitrarse)
+        val rbAdministrador = findViewById<RadioButton>(R.id.rbAdministrador)
 
         btnRegistrarse.setOnClickListener {
             val nombreTxt = etUsuario.text.toString().trim()
@@ -40,7 +42,8 @@ class CrearCuentaActivity : AppCompatActivity() {
             } else if (passTxt != confirmarTxt) {
                 etConfirmar.error = "Las contraseñas no coinciden"
             } else {
-                val guardadoExitoso = dbHelper.insertarUsuario(nombreTxt, passTxt)
+                val rol = if (rbAdministrador.isChecked) "admin" else "usuario"
+                val guardadoExitoso = dbHelper.insertarUsuario(nombreTxt, passTxt, rol)
                 if (guardadoExitoso) {
                     Toast.makeText(this, "¡Usuario registrado con éxito!", Toast.LENGTH_SHORT).show()
                     finish() // Cierra el registro y regresa

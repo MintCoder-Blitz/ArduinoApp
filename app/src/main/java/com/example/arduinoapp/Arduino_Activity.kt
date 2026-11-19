@@ -23,6 +23,10 @@ import java.io.IOException
 import java.io.InputStream
 import java.util.UUID
 import java.util.concurrent.Executors
+import com.hivemq.client.mqtt.MqttClient
+import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient
+import org.json.JSONObject
+import java.nio.ByteBuffer
 
 class Arduino_Activity : AppCompatActivity() {
 
@@ -40,6 +44,8 @@ class Arduino_Activity : AppCompatActivity() {
 
     private lateinit var btnConectar: Button
     private lateinit var tvRespuestaArduino: TextView
+    private var mqttClient: Mqtt3AsyncClient? = null
+    private var mqttConectado = false
 
     private val solicitudPermisoBluetooth =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { concedido ->
@@ -62,38 +68,103 @@ class Arduino_Activity : AppCompatActivity() {
         }
 
         btnConectar = findViewById(R.id.btnConectar)
-        val btnEstado = findViewById<Button>(R.id.btnEstado)
         val btnRegar = findViewById<Button>(R.id.btnRegar)
         val btnNoRegar = findViewById<Button>(R.id.btnNoRegar)
-        val btnMedidor = findViewById<Button>(R.id.btnMedidor)
         val btnCerrarSesion = findViewById<Button>(R.id.btnCerrar)
         tvRespuestaArduino = findViewById(R.id.tvRespuestaArduino)
+
+        conectarMQTT()
+
+        val rol = intent.getStringExtra("ROL_USUARIO")
+        val esAdministrador = rol == "admin"
+        btnRegar.isEnabled = esAdministrador
+        btnNoRegar.isEnabled = esAdministrador
 
         btnConectar.setOnClickListener {
             conectarBluetooth()
         }
 
-        btnEstado.setOnClickListener {
-            enviarComando("ESTADO\n", "Consultando estado...")
-        }
-
         btnRegar.setOnClickListener {
-            enviarComando("SI\n", "Enviando confirmación de riego (SI)")
+            enviarComando("SI", "Enviando confirmación de riego (SI)")
         }
 
         btnNoRegar.setOnClickListener {
-            enviarComando("NO\n", "Enviando confirmación de no regar (NO)")
-        }
-
-        btnMedidor.setOnClickListener {
-            enviarComando("VALOR\n", "Consultando valor del medidor...")
+            enviarComando("NO", "Enviando confirmación de no regar (NO)")
         }
 
         btnCerrarSesion.setOnClickListener {
             desconectarBluetooth()
+            desconectarMQTT()
             startActivity(Intent(this, MainActivity::class.java))
             finish()
         }
+    }
+
+    private fun conectarMQTT() {
+        mqttClient?.disconnect()
+
+        mqttClient = MqttClient.builder()
+            .useMqttVersion3()
+            .identifier("arduino-app-${System.currentTimeMillis()}")
+            .serverHost("10.46.111.101")
+            .serverPort(1883)
+            .buildAsync()
+
+        mqttClient?.connect()
+            ?.whenComplete { _, error ->
+                if (error == null) {
+                    mqttConectado = true
+                    suscribirEstadoMQTT()
+                } else {
+                    mqttConectado = false
+                    handler.post {
+                        if (!isFinishing) {
+                            tvRespuestaArduino.text =
+                                "Wi-Fi/MQTT no disponible. Puedes usar Bluetooth."
+                        }
+                    }
+                }
+            }
+    }
+
+    private fun suscribirEstadoMQTT() {
+        mqttClient?.subscribeWith()
+            ?.topicFilter("riego/estado")
+            ?.callback { publish ->
+                val texto = publish.payloadAsBytes.toString(Charsets.UTF_8)
+                mostrarEstadoMQTT(texto)
+            }
+            ?.send()
+    }
+
+    private fun mostrarEstadoMQTT(texto: String) {
+        try {
+            val estado = JSONObject(texto)
+            val humedad = estado.optInt("humedad_porcentaje")
+            val seca = estado.optBoolean("necesita_riego")
+            val regada = estado.optBoolean("se_rego")
+            val motivo = estado.optString("motivo", "Sin motivo")
+
+            handler.post {
+                if (!isFinishing) {
+                    tvRespuestaArduino.text =
+                        "Estado: ${if (seca) "SECA" else "HUMEDA"}\n" +
+                        "Humedad: $humedad%\n" +
+                        "Se regó: ${if (regada) "Sí" else "No"}\n" +
+                        "Motivo: $motivo"
+                }
+            }
+        } catch (_: Exception) {
+            handler.post {
+                if (!isFinishing) tvRespuestaArduino.text = texto
+            }
+        }
+    }
+
+    private fun desconectarMQTT() {
+        mqttConectado = false
+        mqttClient?.disconnect()
+        mqttClient = null
     }
 
     private fun conectarBluetooth() {
@@ -186,6 +257,15 @@ class Arduino_Activity : AppCompatActivity() {
     }
 
     private fun enviarComando(comando: String, mensajeEnviado: String) {
+        if (mqttConectado) {
+            mqttClient?.publishWith()
+                ?.topic("riego/comando")
+                ?.payload(ByteBuffer.wrap(comando.toByteArray(Charsets.UTF_8)))
+                ?.send()
+            mostrarToast(mensajeEnviado)
+            return
+        }
+
         connectionExecutor.execute {
             try {
                 val socket = bluetoothSocket
@@ -247,6 +327,7 @@ class Arduino_Activity : AppCompatActivity() {
 
     override fun onDestroy() {
         desconectarBluetooth()
+        desconectarMQTT()
         connectionExecutor.shutdownNow()
         super.onDestroy()
     }

@@ -41,10 +41,11 @@ class IniciarSesion_Activity : AppCompatActivity() {
             if (textoUsuario.isEmpty() || textocontraseña.isEmpty()) {
                 Toast.makeText(this, "Rellene todos los campos", Toast.LENGTH_SHORT).show()
             } else {
-                val esValido = dbHelper.verificarUsuario(textoUsuario, textocontraseña)
-                if (esValido) {
+                val rol = dbHelper.verificarUsuario(textoUsuario, textocontraseña)
+                if (rol != null) {
                     Toast.makeText(this, "Bienvenido", Toast.LENGTH_SHORT).show()
                     val intent = Intent(this, Arduino_Activity::class.java)
+                    intent.putExtra("ROL_USUARIO", rol)
                     startActivity(intent)
                     finish()
                 } else {
