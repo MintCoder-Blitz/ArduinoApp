@@ -27,6 +27,10 @@ import com.hivemq.client.mqtt.MqttClient
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient
 import org.json.JSONObject
 import java.nio.ByteBuffer
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.ValueEventListener
 
 class Arduino_Activity : AppCompatActivity() {
 
@@ -46,6 +50,10 @@ class Arduino_Activity : AppCompatActivity() {
     private lateinit var tvRespuestaArduino: TextView
     private var mqttClient: Mqtt3AsyncClient? = null
     private var mqttConectado = false
+    private var mqttEstadoTopic = ""
+    private var mqttComandoTopic = ""
+    private var referenciaEstado: DatabaseReference? = null
+    private var listenerEstado: ValueEventListener? = null
 
     private val solicitudPermisoBluetooth =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { concedido ->
@@ -70,15 +78,34 @@ class Arduino_Activity : AppCompatActivity() {
         btnConectar = findViewById(R.id.btnConectar)
         val btnRegar = findViewById<Button>(R.id.btnRegar)
         val btnNoRegar = findViewById<Button>(R.id.btnNoRegar)
+        val btnHorarios = findViewById<Button>(R.id.btnHorarios)
         val btnCerrarSesion = findViewById<Button>(R.id.btnCerrar)
         tvRespuestaArduino = findViewById(R.id.tvRespuestaArduino)
 
-        conectarMQTT()
+        val errorConfiguracionFirebase = FirebaseServices.initialize(this)
+        val uidUsuario = if (errorConfiguracionFirebase == null) {
+            FirebaseServices.auth().currentUser?.uid
+        } else {
+            null
+        }
+        if (uidUsuario != null) {
+            mqttEstadoTopic = "riego/$uidUsuario/estado"
+            mqttComandoTopic = "riego/$uidUsuario/comando"
+            conectarMQTT()
+        }
 
         val rol = intent.getStringExtra("ROL_USUARIO")
         val esAdministrador = rol == "admin"
         btnRegar.isEnabled = esAdministrador
         btnNoRegar.isEnabled = esAdministrador
+        btnHorarios.setOnClickListener {
+            startActivity(
+                Intent(this, AlarmasActivity::class.java)
+                    .putExtra("ROL_USUARIO", rol)
+                    .putExtra("USUARIO_UID", intent.getStringExtra("USUARIO_UID"))
+            )
+        }
+        observarEstadoFirebase()
 
         btnConectar.setOnClickListener {
             conectarBluetooth()
@@ -95,6 +122,7 @@ class Arduino_Activity : AppCompatActivity() {
         btnCerrarSesion.setOnClickListener {
             desconectarBluetooth()
             desconectarMQTT()
+            FirebaseServices.auth().signOut()
             startActivity(Intent(this, MainActivity::class.java))
             finish()
         }
@@ -129,12 +157,52 @@ class Arduino_Activity : AppCompatActivity() {
 
     private fun suscribirEstadoMQTT() {
         mqttClient?.subscribeWith()
-            ?.topicFilter("riego/estado")
+            ?.topicFilter(mqttEstadoTopic)
             ?.callback { publish ->
                 val texto = publish.payloadAsBytes.toString(Charsets.UTF_8)
                 mostrarEstadoMQTT(texto)
             }
             ?.send()
+    }
+
+    private fun observarEstadoFirebase() {
+        val configError = FirebaseServices.initialize(this)
+        if (configError != null) {
+            mostrarToast(configError)
+            return
+        }
+
+        val uid = FirebaseServices.auth().currentUser?.uid
+        if (uid == null) {
+            mostrarToast("Inicia sesión para consultar el estado de tu placa")
+            return
+        }
+
+        val reference = FirebaseServices.database().getReference("devices/$uid/status")
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (!snapshot.exists()) return
+
+                val humedad = snapshot.child("humedad_porcentaje").getValue(Int::class.java)
+                val seca = snapshot.child("necesita_riego").getValue(Boolean::class.java) ?: false
+                val motivo = snapshot.child("motivo").getValue(String::class.java) ?: "Sin motivo"
+                handler.post {
+                    if (!isFinishing) {
+                        tvRespuestaArduino.text =
+                            "Estado: ${if (seca) "SECA" else "HÚMEDA"}\n" +
+                                "Humedad: ${humedad?.let { "$it%" } ?: "sin dato"}\n" +
+                                "Motivo: $motivo"
+                    }
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                mostrarToast("No se pudo leer el estado de Firebase: ${error.message}")
+            }
+        }
+        referenciaEstado = reference
+        listenerEstado = listener
+        reference.addValueEventListener(listener)
     }
 
     private fun mostrarEstadoMQTT(texto: String) {
@@ -259,7 +327,7 @@ class Arduino_Activity : AppCompatActivity() {
     private fun enviarComando(comando: String, mensajeEnviado: String) {
         if (mqttConectado) {
             mqttClient?.publishWith()
-                ?.topic("riego/comando")
+                ?.topic(mqttComandoTopic)
                 ?.payload(ByteBuffer.wrap(comando.toByteArray(Charsets.UTF_8)))
                 ?.send()
             mostrarToast(mensajeEnviado)
@@ -275,7 +343,7 @@ class Arduino_Activity : AppCompatActivity() {
                 }
 
                 socket.outputStream.apply {
-                    write(comando.toByteArray(Charsets.UTF_8))
+                    write("$comando\n".toByteArray(Charsets.UTF_8))
                     flush()
                 }
                 mostrarToast(mensajeEnviado)
@@ -326,6 +394,7 @@ class Arduino_Activity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        listenerEstado?.let { referenciaEstado?.removeEventListener(it) }
         desconectarBluetooth()
         desconectarMQTT()
         connectionExecutor.shutdownNow()

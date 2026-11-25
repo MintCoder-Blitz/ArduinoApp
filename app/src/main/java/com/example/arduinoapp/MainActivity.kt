@@ -1,6 +1,5 @@
 package com.example.arduinoapp
 
-import DatabaseHelper
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
@@ -13,7 +12,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import kotlin.jvm.java
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,8 +51,8 @@ class MainActivity : AppCompatActivity() {
             setPadding(48, 0, 48, 0)
         }
         val etUsuario = EditText(this).apply {
-            hint = "Usuario"
-            inputType = InputType.TYPE_CLASS_TEXT
+            hint = "Correo electrónico"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
         }
         val etContrasena = EditText(this).apply {
             hint = "Contraseña actual"
@@ -65,37 +63,87 @@ class MainActivity : AppCompatActivity() {
 
         AlertDialog.Builder(this)
             .setTitle("Eliminar usuario")
-            .setMessage("Ingresa tus credenciales para continuar.")
+            .setMessage("Se eliminará la cuenta. Los horarios de la planta no se borran.")
             .setView(contenido)
             .setNegativeButton("Cancelar", null)
             .setPositiveButton("Continuar") { _, _ ->
-                val usuario = etUsuario.text.toString().trim()
+                val correo = etUsuario.text.toString().trim()
                 val contrasena = etContrasena.text.toString()
-                if (usuario.isEmpty() || contrasena.isEmpty()) {
+                if (correo.isEmpty() || contrasena.isEmpty()) {
                     Toast.makeText(this, "Completa ambos campos", Toast.LENGTH_SHORT).show()
                 } else {
-                    confirmarEliminacion(usuario, contrasena)
+                    eliminarCuenta(correo, contrasena)
                 }
             }
             .show()
     }
 
-    private fun confirmarEliminacion(usuario: String, contrasena: String) {
-        AlertDialog.Builder(this)
-            .setTitle("¿Eliminar la cuenta?")
-            .setMessage("Esta acción no se puede deshacer.")
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Eliminar") { _, _ ->
-                val eliminado = DatabaseHelper(this).use { dbHelper ->
-                    dbHelper.eliminarUsuario(usuario, contrasena)
+    private fun eliminarCuenta(correo: String, contrasena: String) {
+        val configError = FirebaseServices.initialize(this)
+        if (configError != null) {
+            Toast.makeText(this, configError, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val auth = FirebaseServices.auth()
+        auth.signInWithEmailAndPassword(correo, contrasena)
+            .addOnSuccessListener { result ->
+                val usuario = result.user
+                if (usuario == null) {
+                    Toast.makeText(this, "Firebase no devolvió el usuario", Toast.LENGTH_LONG).show()
+                    return@addOnSuccessListener
                 }
-                val mensaje = if (eliminado) {
-                    "La cuenta fue eliminada"
-                } else {
-                    "No se puede eliminar: la cuenta no existe o es la única cuenta"
-                }
-                Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show()
+
+                val perfil = FirebaseServices.database().getReference("users").child(usuario.uid)
+                perfil.child("role").get()
+                    .addOnSuccessListener { role ->
+                        if (role.getValue(String::class.java) == "admin") {
+                            auth.signOut()
+                            Toast.makeText(
+                                this,
+                                "No se puede eliminar la cuenta administradora desde la app",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            perfil.removeValue()
+                                .addOnSuccessListener {
+                                    usuario.delete()
+                                        .addOnSuccessListener {
+                                            auth.signOut()
+                                            Toast.makeText(this, "Cuenta eliminada", Toast.LENGTH_SHORT).show()
+                                        }
+                                        .addOnFailureListener { error ->
+                                            Toast.makeText(
+                                                this,
+                                                "No se pudo eliminar la cuenta: ${error.localizedMessage}",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        }
+                                }
+                                .addOnFailureListener { error ->
+                                    Toast.makeText(
+                                        this,
+                                        "No se pudo eliminar el perfil: ${error.localizedMessage}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                        }
+                    }
+                    .addOnFailureListener { error ->
+                        auth.signOut()
+                        Toast.makeText(
+                            this,
+                            "No se pudo consultar el perfil: ${error.localizedMessage}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
             }
-            .show()
+            .addOnFailureListener { error ->
+                Toast.makeText(
+                    this,
+                    "No se pudo validar la cuenta: ${error.localizedMessage}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
     }
 }

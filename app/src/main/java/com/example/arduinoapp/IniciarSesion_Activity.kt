@@ -1,15 +1,11 @@
 package com.example.arduinoapp
 
-import DatabaseHelper
 import android.content.Intent
 import android.os.Bundle
-import android.text.InputType
 import android.widget.Button
 import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -19,95 +15,104 @@ class IniciarSesion_Activity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main_iniciar)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
 
-        val dbHelper = DatabaseHelper(this)
+        val etCorreo = findViewById<EditText>(R.id.ptIngresoUsuario)
+        val etContrasena = findViewById<EditText>(R.id.ptIngresoContraseña)
+        val btnIniciar = findViewById<Button>(R.id.btniniciarsesion)
+        val btnRecuperar = findViewById<Button>(R.id.btnCambiarContrasena)
 
-        //pantalla iniciar sesion
-
-        val ptingresarusuario = findViewById<EditText>(R.id.ptIngresoUsuario)
-        val ptingresocontraseña = findViewById<EditText>(R.id.ptIngresoContraseña)
-        val btniniciarsesion = findViewById<Button>(R.id.btniniciarsesion)
-        val btnCambiarContrasena = findViewById<Button>(R.id.btnCambiarContrasena)
-
-        btniniciarsesion.setOnClickListener {
-            val textoUsuario = ptingresarusuario.text.toString().trim()
-            val textocontraseña = ptingresocontraseña.text.toString().trim()
-
-            if (textoUsuario.isEmpty() || textocontraseña.isEmpty()) {
-                Toast.makeText(this, "Rellene todos los campos", Toast.LENGTH_SHORT).show()
+        btnIniciar.setOnClickListener {
+            val correo = etCorreo.text.toString().trim()
+            val contrasena = etContrasena.text.toString()
+            if (correo.isBlank() || contrasena.isBlank()) {
+                Toast.makeText(this, "Ingresa correo y contraseña", Toast.LENGTH_SHORT).show()
             } else {
-                val rol = dbHelper.verificarUsuario(textoUsuario, textocontraseña)
-                if (rol != null) {
-                    Toast.makeText(this, "Bienvenido", Toast.LENGTH_SHORT).show()
-                    val intent = Intent(this, Arduino_Activity::class.java)
-                    intent.putExtra("ROL_USUARIO", rol)
-                    startActivity(intent)
-                    finish()
-                } else {
-                    Toast.makeText(this, "Nombre o Contraseña incorrecto", Toast.LENGTH_SHORT).show()
-                }
+                iniciarSesion(correo, contrasena, btnIniciar)
             }
         }
 
-        btnCambiarContrasena.setOnClickListener {
-            mostrarDialogoCambiarContrasena()
+        btnRecuperar.setOnClickListener {
+            val correo = etCorreo.text.toString().trim()
+            if (correo.isBlank()) {
+                etCorreo.error = "Ingresa tu correo"
+            } else {
+                enviarRecuperacion(correo, btnRecuperar)
+            }
         }
     }
 
-    private fun mostrarDialogoCambiarContrasena() {
-        val contenido = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(48, 0, 48, 0)
+    private fun iniciarSesion(correo: String, contrasena: String, boton: Button) {
+        val configError = FirebaseServices.initialize(this)
+        if (configError != null) {
+            Toast.makeText(this, configError, Toast.LENGTH_LONG).show()
+            return
         }
-        val etUsuario = EditText(this).apply {
-            hint = "Nombre de usuario"
-            inputType = InputType.TYPE_CLASS_TEXT
-        }
-        val etNuevaContrasena = EditText(this).apply {
-            hint = "Nueva contraseña"
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        }
-        val etConfirmarContrasena = EditText(this).apply {
-            hint = "Confirmar nueva contraseña"
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        }
-        contenido.addView(etUsuario)
-        contenido.addView(etNuevaContrasena)
-        contenido.addView(etConfirmarContrasena)
 
-        AlertDialog.Builder(this)
-            .setTitle("Cambiar contraseña")
-            .setMessage("La cuenta se identifica solo por su nombre de usuario.")
-            .setView(contenido)
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Guardar") { _, _ ->
-                val usuario = etUsuario.text.toString().trim()
-                val nuevaContrasena = etNuevaContrasena.text.toString()
-                val confirmarContrasena = etConfirmarContrasena.text.toString()
-
-                when {
-                    usuario.isEmpty() || nuevaContrasena.isEmpty() || confirmarContrasena.isEmpty() ->
-                        Toast.makeText(this, "Completa todos los campos", Toast.LENGTH_SHORT).show()
-                    nuevaContrasena != confirmarContrasena ->
-                        Toast.makeText(this, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
-                    else -> {
-                        val actualizada = DatabaseHelper(this).use { dbHelper ->
-                            dbHelper.actualizarContrasena(usuario, nuevaContrasena)
-                        }
-                        val mensaje = if (actualizada) {
-                            "Contraseña actualizada"
-                        } else {
-                            "No se encontró ese usuario"
-                        }
-                        Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show()
-                    }
+        boton.isEnabled = false
+        FirebaseServices.auth().signInWithEmailAndPassword(correo, contrasena)
+            .addOnSuccessListener { result ->
+                val uid = result.user?.uid
+                if (uid == null) {
+                    boton.isEnabled = true
+                    Toast.makeText(this, "Firebase no devolvió el usuario", Toast.LENGTH_LONG).show()
+                    return@addOnSuccessListener
                 }
+
+                FirebaseServices.database().getReference("users")
+                    .child(uid)
+                    .child("role")
+                    .get()
+                    .addOnSuccessListener { snapshot ->
+                        val role = snapshot.getValue(String::class.java) ?: "usuario"
+                        startActivity(
+                            Intent(this, Arduino_Activity::class.java)
+                                .putExtra("ROL_USUARIO", role)
+                                .putExtra("USUARIO_UID", uid)
+                        )
+                        finish()
+                    }
+                    .addOnFailureListener { error ->
+                        FirebaseServices.auth().signOut()
+                        boton.isEnabled = true
+                        Toast.makeText(
+                            this,
+                            "No se pudo consultar el perfil: ${error.localizedMessage}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
             }
-            .show()
+            .addOnFailureListener { error ->
+                boton.isEnabled = true
+                Toast.makeText(
+                    this,
+                    "No se pudo iniciar sesión: ${error.localizedMessage}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    }
+
+    private fun enviarRecuperacion(correo: String, boton: Button) {
+        val configError = FirebaseServices.initialize(this)
+        if (configError != null) {
+            Toast.makeText(this, configError, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        boton.isEnabled = false
+        FirebaseServices.auth().sendPasswordResetEmail(correo)
+            .addOnCompleteListener { task ->
+                boton.isEnabled = true
+                val mensaje = if (task.isSuccessful) {
+                    "Revisa tu correo para restablecer la contraseña"
+                } else {
+                    "No se pudo enviar el correo: ${task.exception?.localizedMessage}"
+                }
+                Toast.makeText(this, mensaje, Toast.LENGTH_LONG).show()
+            }
     }
 }

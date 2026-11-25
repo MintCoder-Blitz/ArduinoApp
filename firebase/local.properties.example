@@ -1,0 +1,5 @@
+# Copy these settings into the root local.properties file; keep that file untracked.
+firebase.apiKey=YOUR_FIREBASE_WEB_API_KEY
+firebase.appId=YOUR_FIREBASE_ANDROID_APP_ID
+firebase.projectId=YOUR_FIREBASE_PROJECT_ID
+firebase.databaseUrl=https://YOUR_DATABASE.REGION.firebasedatabase.app

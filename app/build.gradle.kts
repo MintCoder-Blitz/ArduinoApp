@@ -1,6 +1,20 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
 }
+
+val localProperties = Properties().apply {
+    val propertiesFile = rootProject.file("local.properties")
+    if (propertiesFile.exists()) {
+        propertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun firebaseProperty(name: String): String =
+    localProperties.getProperty(name, "")
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
 
 android {
     namespace = "com.example.arduinoapp"
@@ -16,6 +30,15 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "FIREBASE_API_KEY", "\"${firebaseProperty("firebase.apiKey")}\"")
+        buildConfigField("String", "FIREBASE_APP_ID", "\"${firebaseProperty("firebase.appId")}\"")
+        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${firebaseProperty("firebase.projectId")}\"")
+        buildConfigField("String", "FIREBASE_DATABASE_URL", "\"${firebaseProperty("firebase.databaseUrl")}\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -44,6 +67,9 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)
+    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-database")
     implementation("com.hivemq:hivemq-mqtt-client:1.3.9")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)

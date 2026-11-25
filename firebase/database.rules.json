@@ -1,0 +1,25 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid && ((!data.exists() && newData.child('role').val() == 'usuario') || !newData.exists())"
+      }
+    },
+    "devices": {
+      "$ownerUid": {
+        "alarms": {
+          ".read": "auth != null && (auth.uid == $ownerUid || (root.child('users').child(auth.uid).child('role').val() == 'device' && root.child('users').child(auth.uid).child('ownerUid').val() == $ownerUid))",
+          ".write": "auth != null && auth.uid == $ownerUid && newData.numChildren() <= 8",
+          "$alarmId": {
+            ".validate": "newData.hasChildren(['hour', 'minute', 'enabled', 'daysMask', 'durationSeconds']) && newData.child('hour').isNumber() && newData.child('hour').val() >= 0 && newData.child('hour').val() <= 23 && newData.child('minute').isNumber() && newData.child('minute').val() >= 0 && newData.child('minute').val() <= 59 && newData.child('enabled').isBoolean() && newData.child('daysMask').isNumber() && newData.child('daysMask').val() >= 1 && newData.child('daysMask').val() <= 127 && newData.child('durationSeconds').isNumber() && newData.child('durationSeconds').val() >= 1 && newData.child('durationSeconds').val() <= 30"
+          }
+        },
+        "status": {
+          ".read": "auth != null && (auth.uid == $ownerUid || (root.child('users').child(auth.uid).child('role').val() == 'device' && root.child('users').child(auth.uid).child('ownerUid').val() == $ownerUid))",
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'device' && root.child('users').child(auth.uid).child('ownerUid').val() == $ownerUid"
+        }
+      }
+    }
+  }
+}

@@ -48,6 +48,20 @@
         app:layout_constraintTop_toBottomOf="@id/Titulo_principal" />
 
     <Button
+        android:id="@+id/btnHorarios"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="32dp"
+        android:minHeight="56dp"
+        android:text="Horarios de riego"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvRespuestaArduino" />
+
+    <Button
         android:id="@+id/btnConectar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -59,7 +73,7 @@
         android:textSize="20sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvRespuestaArduino" />
+        app:layout_constraintTop_toBottomOf="@id/btnHorarios" />
 
     <Button
         android:id="@+id/btnRegar"
