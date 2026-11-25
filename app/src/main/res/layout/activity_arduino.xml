@@ -1,123 +1,230 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#009688"
+    android:background="#0B1716"
     android:fillViewport="true"
+    android:clipToPadding="false"
     tools:context=".Arduino_Activity">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
-    <TextView
-        android:id="@+id/Titulo_principal"
-        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="32dp"
-        android:layout_marginEnd="24dp"
-        android:fontFamily="@font/comfortaa"
-        android:gravity="center"
-        android:text="Sistema de riego"
-        android:textColor="#F4EDED"
-        android:textSize="35sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingTop="24dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="32dp">
 
-    <TextView
-        android:id="@+id/tvRespuestaArduino"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="24dp"
-        android:gravity="center"
-        android:minHeight="72dp"
-        android:padding="16dp"
-        android:text="Respuesta del Arduino: Esperando..."
-        android:textColor="#FFFFFF"
-        android:textSize="15sp"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/Titulo_principal" />
+        <TextView
+            android:id="@+id/Titulo_principal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/comfortaa"
+            android:text="Sistema de riego"
+            android:textColor="#FFFFFF"
+            android:textSize="31sp"
+            android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/btnHorarios"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="32dp"
-        android:minHeight="56dp"
-        android:text="Horarios de riego"
-        android:textSize="20sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvRespuestaArduino" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Control y monitorización de tu planta"
+            android:textColor="#91A7A4"
+            android:textSize="14sp" />
 
-    <Button
-        android:id="@+id/btnConectar"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="32dp"
-        android:minHeight="56dp"
-        android:text="Conectarse"
-        android:textSize="20sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnHorarios" />
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            app:cardBackgroundColor="#132321"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#203B37"
+            app:strokeWidth="1dp">
 
-    <Button
-        android:id="@+id/btnRegar"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="32dp"
-        android:minHeight="56dp"
-        android:text="Regar"
-        android:textSize="20sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnConectar" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="22dp">
 
-    <Button
-        android:id="@+id/btnNoRegar"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="32dp"
-        android:minHeight="56dp"
-        android:text="No quiero regar"
-        android:textSize="20sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnRegar" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-    <Button
-        android:id="@+id/btnCerrar"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="32dp"
-        android:layout_marginBottom="24dp"
-        android:minHeight="56dp"
-        android:text="Cerrar sesión"
-        android:textSize="20sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnNoRegar"
-        app:layout_constraintBottom_toBottomOf="parent" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="ESTADO ACTUAL"
+                        android:textColor="#8BA39F"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="#193B34"
+                        android:paddingStart="12dp"
+                        android:paddingTop="6dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="6dp"
+                        android:text="FIREBASE"
+                        android:textColor="#58D7AC"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvRespuestaArduino"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:gravity="start"
+                    android:minHeight="94dp"
+                    android:text="Esperando información del dispositivo..."
+                    android:textColor="#F4FAF8"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    tools:text="Estado: HÚMEDA\nHumedad: 74%\nSe regó: No\nMotivo: Sin acción" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="Riego"
+            android:textColor="#FFFFFF"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Control manual del sistema"
+            android:textColor="#819491"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRegar"
+                android:layout_width="0dp"
+                android:layout_height="58dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:text="Regar"
+                android:textAllCaps="false"
+                android:textColor="#06231A"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:backgroundTint="#58D7AC"
+                app:cornerRadius="18dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnNoRegar"
+                android:layout_width="0dp"
+                android:layout_height="58dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:text="No regar"
+                android:textAllCaps="false"
+                android:textColor="#D9E5E2"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:backgroundTint="#1B2D2A"
+                app:cornerRadius="18dp"
+                app:strokeColor="#33504B"
+                app:strokeWidth="1dp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="30dp"
+            android:text="Configuración"
+            android:textColor="#FFFFFF"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnHorarios"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:layout_marginTop="14dp"
+            android:gravity="center_vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:text="Horarios de riego"
+            android:textAllCaps="false"
+            android:textColor="#E4EFEC"
+            android:textSize="15sp"
+            app:backgroundTint="#132321"
+            app:cornerRadius="18dp"
+            app:strokeColor="#29423E"
+            app:strokeWidth="1dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnConectar"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:text="Conectar por Bluetooth"
+            android:textAllCaps="false"
+            android:textColor="#E4EFEC"
+            android:textSize="15sp"
+            app:backgroundTint="#132321"
+            app:cornerRadius="18dp"
+            app:strokeColor="#29423E"
+            app:strokeWidth="1dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCerrar"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="30dp"
+            android:text="Cerrar sesión"
+            android:textAllCaps="false"
+            android:textColor="#FF9B9B"
+            android:textSize="15sp"
+            app:backgroundTint="#291B1B"
+            app:cornerRadius="18dp"
+            app:strokeColor="#583131"
+            app:strokeWidth="1dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:text="Sistema conectado mediante Firebase"
+            android:textColor="#627773"
+            android:textSize="11sp" />
+
+    </LinearLayout>
+
 </ScrollView>
